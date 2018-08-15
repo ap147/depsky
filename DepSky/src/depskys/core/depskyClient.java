@@ -20,6 +20,7 @@ public class depskyClient {
 
 
         DepSkySDataUnit dataUnit = new DepSkySDataUnit(bucketName);
+        dataUnit.setUsingPVSS(true);
         client.write(dataUnit, data);
     }
 
@@ -27,7 +28,7 @@ public class depskyClient {
 
 
         DepSkySDataUnit dataUnit = new DepSkySDataUnit(bucketName);
-
+        dataUnit.setUsingPVSS(true);
         byte[] dataread = client.read(dataUnit);
 
         return dataread;
