@@ -5,8 +5,8 @@ import java.nio.file.*;
 import java.sql.*;
 import java.util.Arrays;
 
-public class deduplication {
-
+public class deduplication
+{
     static Connection con = null;
 
     static depskyClient client;
@@ -18,9 +18,8 @@ public class deduplication {
         Class.forName("com.mysql.cj.jdbc.Driver");
         // Make sure your Amazon rds is public available and you have added ur ip to a security group or create one.
         // More info : https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_WorkingWithSecurityGroups.html
-        con = DriverManager.getConnection("jdbc:mysql://aws-rds-endpoint","username","password");
-
-        client = new depskyClient(6, true);
+        con = DriverManager.getConnection("jdbc:endpoint","username","password");
+        client = new depskyClient(3, true);
 
         // Save
         if (args[0].equals(save))
@@ -35,8 +34,8 @@ public class deduplication {
         }
     }
 
-    private static void save (String filename, int chunkSize) throws Exception {
-
+    private static void save (String filename, int chunkSize) throws Exception
+    {
         // Read the file into a byte array
         byte [] data = readBytesFromFile(filename);
 
@@ -51,12 +50,8 @@ public class deduplication {
         int from = currentPoint;
         int to = chunkSize;
 
-        String chunkName;
-
         while (currentPoint != lengthData)
         {
-            chunkName = filename + currentPoint;
-
             // When not enough bytes for a whole chunk
             if (NotEnoughBytes(lengthData, currentPoint, chunkSize))
             {
@@ -91,13 +86,14 @@ public class deduplication {
         return false;
     }
 
-
-    private static void load (String filename) throws Exception {
+    private static void load (String filename) throws Exception
+    {
         byte [] chunk, combinedChunks, tempCombinedChunks;
-        String refrenceFileName = filename + "dup";
-        byte [] refFile = client.download(refrenceFileName);
-        byteArrayToFile(refrenceFileName, refFile);
-        try (BufferedReader br = new BufferedReader(new FileReader(refrenceFileName)))
+        String reference_file_name = filename + "dup";
+        byte [] refFile = client.download(reference_file_name);
+        byteArrayToFile(reference_file_name, refFile);
+
+        try (BufferedReader br = new BufferedReader(new FileReader(reference_file_name)))
         {
             String line = br.readLine();
             combinedChunks = client.download(line);;
@@ -118,7 +114,9 @@ public class deduplication {
         catch (IOException e)
         {
             e.printStackTrace();
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             e.printStackTrace();
         }
     }
@@ -128,7 +126,8 @@ public class deduplication {
     {
         // https://stackoverflow.com/questions/13352972/convert-file-to-byte-array-and-vice-versa
         String strFilePath = filename;
-        try {
+        try
+        {
             FileOutputStream fos = new FileOutputStream(strFilePath);
 
             fos.write(fullFile);
@@ -141,49 +140,26 @@ public class deduplication {
             System.out.println("IOException : " + ioe);
         }
     }
-    public static void saveChunk (byte [] dataSplit, String skeletonfile) throws Exception {
+
+    public static void saveChunk (byte [] dataSplit, String skeletonfile) throws Exception
+    {
         // Calculate Hash
         String hash = calculateHash(dataSplit);
-        //String chunkExists = hashExists ("globalHashs", hash);
         boolean chunkExists = rdsHashExists(hash);
-        String msg;
 
         // IF chunk doesnt exist
         if (!chunkExists)
         {
             // Write this new chunk to a file & ADD HASH TO Global hashfile
-
-            //write(chunkName, dataSplit);
-            System.out.println(hash);
             client.upload(hash , dataSplit);
 
-//            msg = hash + " " + chunkName + " " + 1;
-//            addToFile("globalHashs", msg);
             rdsWriteHash(hash);
             addToFile(skeletonfile, hash);
-
         }
         // OTHERWISE
         else
         {
             addToFile(skeletonfile, hash);
-        }
-    }
-
-    private static void write (String filename, byte [] data) throws IOException
-    {
-        FileOutputStream stream = new FileOutputStream(filename);
-        try
-        {
-            stream.write(data);
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-        finally
-        {
-            stream.close();
         }
     }
 
@@ -203,25 +179,19 @@ public class deduplication {
         }
     }
 
-    private static void appendToGlobalHash (String filename, byte [] data) throws IOException
+    private static byte[] readBytesFromFile(String filePath)
     {
-
-    }
-
-    private static byte[] readBytesFromFile(String filePath) {
-
         FileInputStream fileInputStream = null;
         byte[] bytesArray = null;
 
-        try {
-
+        try
+        {
             File file = new File(filePath);
             bytesArray = new byte[(int) file.length()];
             System.out.println(filePath);
             //read file into bytes[]
             fileInputStream = new FileInputStream(filePath);
             fileInputStream.read(bytesArray);
-
         }
         catch (IOException e)
         {
@@ -240,44 +210,14 @@ public class deduplication {
                     e.printStackTrace();
                 }
             }
-
         }
-
         return bytesArray;
     }
 
+    private static String calculateHash (byte [] data) throws Exception {
 
-    private static String calculateHash (byte [] data) throws Exception
-    {
-        Checksum x = new Checksum();
-        return x.getChecksum(data, "SHA1");
-    }
-
-    private static String hashExists (String filename, String hash)
-    {
-        try (BufferedReader br = new BufferedReader(new FileReader(filename)))
-        {
-            String line;
-            while ((line = br.readLine()) != null)
-            {
-                String array[] = line.split(" ");
-                if (array[0].equals(hash))
-                {
-                    return array[1];
-                }
-            }
-        }
-        catch (IOException e)
-        {
-            e.printStackTrace();
-        }
-        return "0";
-    }
-
-    // Used when chunk is being used for multiple files
-    private static void incrementHash(String filename, String hash)
-    {
-       // https://stackoverflow.com/questions/20039980/java-replace-line-in-text-file
+        Checksum hash = new Checksum();
+        return hash.getChecksum(data, "SHA1");
     }
 
     // When file uploaded, makes entry in dataMap.
@@ -305,8 +245,8 @@ public class deduplication {
         String selectStuff = "SELECT * from hash_tbl WHERE hash = '"+ hash +"'";
 
         // Pick the database then run the query
-        ResultSet rows = sqlState.executeQuery(pickDB);
-        rows = sqlState.executeQuery(selectStuff);
+        sqlState.executeQuery(pickDB);
+        ResultSet rows = sqlState.executeQuery(selectStuff);
 
         // if hash exists, print it and return true
         if(rows.next()) {

@@ -2,11 +2,6 @@ package depskys.core;
 
 import exceptions.StorageCloudException;
 
-import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
-
 public class depskyClient {
 
     LocalDepSkySClient client;
@@ -40,5 +35,4 @@ public class depskyClient {
         client.deleteContainer(dataUnit);
 
     }
-
 }
